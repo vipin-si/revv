@@ -146,9 +146,9 @@ func TestRedesignE2E(t *testing.T) {
 
 		t.Run("TC_1_1_4_InitRepoPromptSections", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "init-repo")
-			assertContains(t, content, "## Context", "Context section")
-			assertContains(t, content, "## Output", "Output section")
-			assertContains(t, content, "## Rules", "Rules section")
+			assertContains(t, content, "## Context Gathering", "Context section")
+			assertContains(t, content, "## What Tests to Generate", "Output section")
+			assertContains(t, content, "## test.md Format", "Format section")
 		})
 
 		t.Run("TC_1_1_5_InitRepoPromptTestMdSpec", func(t *testing.T) {
@@ -162,18 +162,18 @@ func TestRedesignE2E(t *testing.T) {
 
 		t.Run("TC_1_1_6_InitRepoPromptDockerfileRules", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "init-repo")
-			assertContains(t, content, "Base Image", "Dockerfile base image rule")
-			assertContains(t, content, "System Dependencies", "Dockerfile dependencies rule")
+			assertContains(t, content, "Base image", "Dockerfile base image rule")
+			assertContains(t, content, "System deps", "Dockerfile dependencies rule")
 			assertContains(t, content, "/workspace", "Dockerfile working directory")
-			assertContains(t, content, "Copy Source", "Dockerfile source copying rule")
-			assertContains(t, content, "Pre-Build", "Dockerfile pre-build / RUN rule")
+			assertContains(t, content, "COPY source", "Dockerfile source copying rule")
+			assertContains(t, content, "Pre-build", "Dockerfile pre-build / RUN rule")
 		})
 
 		t.Run("TC_1_1_7_InitRepoPromptAgentsMdRules", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "init-repo")
-			assertContains(t, content, "AGENTS.md Generation Rules", "AGENTS.md title")
-			assertContains(t, content, "Append or Create", "AGENTS.md append/create rule")
-			assertContains(t, content, "Deduplication", "AGENTS.md deduplication rule")
+			assertContains(t, content, "## AGENTS.md Rules", "AGENTS.md title")
+			assertContains(t, content, "append", "AGENTS.md append rule")
+			assertContains(t, content, "already configured", "AGENTS.md deduplication rule")
 			assertContains(t, content, "vssinghh/revv", "AGENTS.md checking duplicate repo path")
 		})
 
@@ -308,9 +308,9 @@ func TestRedesignE2E(t *testing.T) {
 			assertContains(t, content, "screenshot", "DevTools screenshot tool")
 		})
 
-		t.Run("TC_1_4_8_RunTestsPromptManualExecution", func(t *testing.T) {
+		t.Run("TC_1_4_8_RunTestsBrowserFallback", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "run-tests")
-			assertContains(t, content, "manual - needs human verification", "Manual test execution print instructions")
+			assertContains(t, content, "browser - needs human verification", "Browser test fallback instructions")
 		})
 
 		t.Run("TC_1_4_9_RunTestsPromptFailureAnalysis", func(t *testing.T) {
@@ -397,12 +397,12 @@ func TestRedesignE2E(t *testing.T) {
 
 		t.Run("TC_2_1_2_InitRepoAgentsMdSkipDuplicate", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "init-repo")
-			assertContains(t, content, "If this string is already present, skip", "AGENTS.md deduplication logic")
+			assertContains(t, content, "do NOT add anything", "AGENTS.md deduplication logic")
 		})
 
 		t.Run("TC_2_1_3_InitRepoNoBuildConfigs", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "init-repo")
-			assertContains(t, content, "detected language", "init-repo detected config")
+			assertContains(t, content, "build system", "init-repo detected config")
 		})
 
 		t.Run("TC_2_1_4_InitRepoInvalidYamlFrontmatter", func(t *testing.T) {
@@ -520,7 +520,7 @@ name: init-repo
 		t.Run("TC_2_4_2_RunTestsNoChromeDevTools", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "run-tests")
 			assertContains(t, content, "Degraded/Fallback Mode", "DevTools unavailable instruction")
-			assertContains(t, content, "manual - needs human verification", "DevTools unavailable fallback")
+			assertContains(t, content, "browser - needs human verification", "DevTools unavailable fallback")
 		})
 
 		t.Run("TC_2_4_3_RunTestsNoTestsDefined", func(t *testing.T) {
@@ -605,7 +605,7 @@ name: init-repo
 		t.Run("TC_3_4_InitRepoToAddTestsPipeline", func(t *testing.T) {
 			contentInit, _ := readPromptFile(t, root, "init-repo")
 			contentAdd, _ := readPromptFile(t, root, "add-tests")
-			assertContains(t, contentInit, "Test MD Format", "init-repo specifies test format")
+			assertContains(t, contentInit, "test.md Format", "init-repo specifies test format")
 			assertContains(t, contentAdd, "Test MD Format", "add-tests complies with test format")
 		})
 
@@ -623,7 +623,7 @@ name: init-repo
 	t.Run("Tier4_RealWorld", func(t *testing.T) {
 		t.Run("TC_4_1_GreenfieldSetupFlow", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "init-repo")
-			assertContains(t, content, "initialization", "init-repo setup scenario")
+			assertContains(t, content, "setting up", "init-repo setup scenario")
 			assertContains(t, content, ".revv/", "init-repo creates config directory")
 			assertContains(t, content, "AGENTS.md", "init-repo creates agent instructions file")
 		})

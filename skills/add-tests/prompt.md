@@ -45,14 +45,13 @@ Your output must consist of a clear decision and corresponding actions:
   - `unit/`: Narrow testing of components or individual functions.
   - `integration/`: Testing interactions between systems.
   - `browser/`: Web UI workflows.
-  - `manual/`: Non-automated UI or user flows.
 
 ### 3. Test MD Format Compliance
 Every created test must follow the standard `revv` format:
 - `## Description`: Summary of target behavior.
 - `## Priority`: `blocking` or `warning`.
-- `## Type`: `automated`, `browser`, or `manual`.
-- `## Commands` (if automated) or `## Steps` (if browser/manual).
+- `## Type`: `automated` or `browser`.
+- `## Commands` (if automated) or `## Steps` (if browser).
 - `## Expected Output`: Verifiable outcome.
 
 ### 4. Concrete Examples of Test Decisions

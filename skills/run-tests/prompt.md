@@ -1,6 +1,6 @@
 # Skill Prompt: Run Tests
 
-This prompt guides the execution and evaluation of the repository's QA suite. It orchestrates test preparation, calls test-creation checks, and runs different types of tests using Go-based automation, browser automation, or manual verification steps.
+This prompt guides the execution and evaluation of the repository's QA suite. It orchestrates test preparation, calls test-creation checks, and runs different types of tests using Go-based automation or browser automation.
 
 ## Context
 
@@ -25,8 +25,7 @@ Perform the following execution flow:
 
 2. **Categorize and Execute Tests:**
    - **Automated Tests** (`## Type: automated`): Run them using the `revv` command-line tool.
-   - **Browser Tests** (`## Type: browser`): Execute them interactively using Chrome DevTools MCP tools.
-   - **Manual Tests** (`## Type: manual`): Extract and print instructions for manual human validation.
+   - **Browser Tests** (`## Type: browser`): Execute them interactively using Chrome DevTools MCP tools. If Chrome DevTools is unavailable, print the steps for the user but still report the test as type `browser`.
 
 3. **Summary & Diagnostics:**
    - Produce a detailed report summarizing passes, failures, duration, and blockers.
@@ -59,24 +58,40 @@ If any test is configured with `## Type: browser`, execute it directly via the a
   - Interact with elements using `click`, `fill`, or `type` selectors.
   - Verify page state using `get_text` or `evaluate_javascript`.
   - Take visual state captures using `screenshot` and embed or link them in the final test report.
-- **Degraded/Fallback Mode**: If Chrome DevTools MCP tools are unavailable in the current environment, treat the browser test as a manual test. Print the steps for the user and mark it as "manual - needs human verification".
+- **Degraded/Fallback Mode**: If Chrome DevTools MCP tools are unavailable in the current environment, print the browser test steps for the user. The test type remains `browser` and should be marked as "browser - needs human verification".
 
-### 3. Manual Test Rules
-
-For tests with `## Type: manual`:
-- Do not run commands on the host or inside containers.
-- Print the description, steps, and expected output clearly to the user.
-- Mark the status of these tests as "manual - needs human verification".
-
-### 4. Failure Analysis and Reporting
+### 3. Failure Analysis and Reporting
 
 - **Summary Structure**:
   Present the results table at the top of your response:
-  | Category | Test Name | Type | Status (Pass/Fail/Manual) | Priority (Blocking/Warning) |
+  | Category | Test Name | Type | Status (Pass/Fail/Pending) | Priority (Blocking/Warning) |
   | --- | --- | --- | --- | --- |
+
 - **Failure Diagnostics**:
   For each failed test:
   1. Retrieve and display the error log or stdout.
   2. Inspect the test commands and the modified code files.
   3. Determine the root cause: is it a code bug, a test configuration issue, or a broken dependency?
   4. Write a concrete recommendation/fix.
+
+- **Severity Classification**:
+  - If ANY `blocking` test fails → report overall status as **FAIL** and clearly state: "Blocking tests failed — do not merge."
+  - If only `warning` tests fail → report overall status as **WARN** and list the issues.
+  - If all tests pass → report overall status as **PASS**.
+
+- **Browser Test Failures**:
+  - Include a screenshot of the failure state when possible.
+  - Note whether the failure is deterministic (same result on retry) or flaky.
+  - If a browser test has a `## Script` section and it fails, fall back to `## Steps` and re-run via LLM interpretation.
+
+- **Retry Policy**:
+  - Do NOT retry automated tests — they are deterministic.
+  - Browser tests may be retried once if the first attempt fails, to account for timing or rendering issues.
+
+- **Final Output**:
+  End your report with a clear verdict:
+  ```
+  ## Verdict
+  [PASS | WARN | FAIL]
+  [One-line summary of results]
+  ```

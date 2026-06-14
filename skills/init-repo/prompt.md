@@ -104,30 +104,25 @@ Basic security checks appropriate to the project.
 - **Are dependencies free of known vulnerabilities?** (`npm audit`, `go vuln check`)
 - **Does the app sanitize user input?**
 
-#### 6. `browser/` — Does the UI work? (blocking or warning)
-Only for projects with a web UI. These are `## Type: browser` tests.
+#### 6. `browser/` — Does the UI/app work? (blocking or warning)
+For any project with a web UI, API with a frontend, or visual output. These are `## Type: browser` tests executed by the IDE via Chrome DevTools MCP.
 
-- **Does the landing page load?**
+- **Does the landing page load without errors?**
 - **Does the login flow work?**
 - **Do forms submit correctly?**
 - **Does navigation between pages work?**
 - **Does the app render correctly on mobile viewports?**
 - **Are there console errors on page load?**
+- **Does the UI look correct?** (the IDE takes screenshots and judges)
+- **Are the docs accurate?** (the IDE can browse docs and compare to behavior)
+- **Is the error messaging user-friendly?**
 
 Example:
 ```
 .revv/browser/landing_page/test.md   → open localhost:3000, verify title, no console errors
 .revv/browser/login_flow/test.md     → enter credentials, verify redirect to dashboard
+.revv/browser/docs_accuracy/test.md  → open README, verify instructions match actual behavior
 ```
-
-#### 7. `manual/` — Things only a human can verify (warning)
-Tests that require human judgment. Always generate at least one.
-
-- **Does the README accurately describe the project?**
-- **Are the docs up to date with the current behavior?**
-- **Does the UI look correct (layout, colors, spacing)?**
-- **Is the error messaging user-friendly?**
-- **Does the onboarding experience make sense?**
 
 ### How Many Tests?
 
@@ -157,9 +152,8 @@ Quality over quantity. Each test should catch a real problem, not pad a number. 
    - `warning` = something is wrong but not critical
 
 6. **Set type correctly:**
-   - `automated` = shell commands in Docker (the binary runs these)
-   - `browser` = steps the IDE executes via Chrome DevTools MCP
-   - `manual` = steps printed for a human to follow
+   - `automated` = shell commands in Docker (the binary runs these in parallel)
+   - `browser` = steps the IDE executes via Chrome DevTools MCP (UI, visual, subjective checks)
 
 ## test.md Format
 
@@ -173,7 +167,7 @@ Every `test.md` MUST have these sections in this order:
 [blocking | warning]
 
 ## Type
-[automated | browser | manual]
+[automated | browser]
 
 ## Commands
 ```bash
@@ -251,7 +245,7 @@ Before presenting the generated files to the developer:
 - [ ] Every automated test's commands would actually work in the Dockerfile's environment
 - [ ] At least one `build/` test exists (blocking)
 - [ ] At least one `sanity/` test exists (blocking)
-- [ ] At least one `manual/` test exists (warning)
+- [ ] At least one `browser/` test exists if the project has a UI
 - [ ] Dockerfile pre-builds the project
 - [ ] AGENTS.md is updated (not duplicated)
 - [ ] Test names are descriptive (no `test1`, `check2`)

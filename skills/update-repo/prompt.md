@@ -48,9 +48,9 @@ For every test that is updated or deleted, you must provide a brief, technical e
 Any updated or proposed new test must strictly follow the `revv` test format:
 - `## Description`: Clear intent and validation reason.
 - `## Priority`: Either `blocking` or `warning`.
-- `## Type`: Either `automated`, `browser`, or `manual`.
+- `## Type`: Either `automated` or `browser`.
 - `## Commands` (if Type is `automated`): Bash commands to run within the Docker container sandbox.
-- `## Steps` (if Type is `browser` or `manual`): Step-by-step instructions.
+- `## Steps` (if Type is `browser`): Step-by-step instructions.
 - `## Expected Output`: Successful validation criteria.
 
 ### 4. Dockerfile and Helper Alignment

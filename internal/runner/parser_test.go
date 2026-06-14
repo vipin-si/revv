@@ -211,9 +211,9 @@ func TestNormalizeType(t *testing.T) {
 		{"ui", "browser"},
 		{"e2e", "browser"},
 		{"visual", "browser"},
-		{"manual", "manual"},
-		{"human", "manual"},
-		{"steps", "manual"},
+		{"manual", "browser"},
+		{"human", "browser"},
+		{"steps", "browser"},
 		{"anything_else", "automated"},
 	}
 
@@ -261,7 +261,7 @@ echo "hello"
 		t.Errorf("expected Type 'automated', got %q", pt2.Type)
 	}
 
-	// Test default inference: no type, no commands -> manual
+	// Test default inference: no type, no commands -> browser
 	contentDefaultManual := `## Description
 Test inference.
 `
@@ -269,8 +269,8 @@ Test inference.
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if pt3.Type != "manual" {
-		t.Errorf("expected Type 'manual', got %q", pt3.Type)
+	if pt3.Type != "browser" {
+		t.Errorf("expected Type 'browser', got %q", pt3.Type)
 	}
 }
 

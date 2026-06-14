@@ -56,7 +56,7 @@ your-repo/
     ├── unit/
     │   └── parser_test/
     │       └── test.md    ← "does the parser handle edge cases?"
-    └── manual/
+    └── browser/
         └── login_flow/
             └── test.md    ← "does the login UI work?" (browser test)
 ```

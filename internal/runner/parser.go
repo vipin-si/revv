@@ -51,7 +51,7 @@ func ParseTestMD(content string) (*ParsedTest, error) {
 		if pt.Commands != "" {
 			pt.Type = "automated"
 		} else {
-			pt.Type = "manual"
+			pt.Type = "browser"
 		}
 	}
 
@@ -73,15 +73,13 @@ func normalizePriority(raw string) string {
 	}
 }
 
-// normalizeType maps test type values to "automated", "browser", or "manual".
+// normalizeType maps test type values to "automated" or "browser".
 func normalizeType(raw string) string {
 	switch raw {
 	case "automated", "auto", "docker", "command", "commands":
 		return "automated"
-	case "browser", "ui", "e2e", "visual":
+	case "browser", "ui", "e2e", "visual", "manual", "human", "steps":
 		return "browser"
-	case "manual", "human", "steps":
-		return "manual"
 	default:
 		return "automated"
 	}
