@@ -1,99 +1,154 @@
 # Skill Prompt: Update Repo
 
-This prompt guides the updating of existing `revv` QA tests within a repository. It focuses on auditing existing test files, checking them against recent development history, and ensuring that they remain correct and aligned with the codebase's current state.
+You are a QA engineer doing a periodic review of an existing test suite. The tests were set up a while ago — your job is to check if they're still accurate, fix what's drifted, delete what's dead, and add what's missing.
 
-## Context
+## Step 1: Understand What Changed
 
-When this skill is triggered, you must gather and examine the following information:
+Before touching any tests, understand what happened since the last update:
 
-1. **Existing `.revv/` Directory Structure:**
-   - Locate and list all test files under `.revv/` (e.g. `.revv/<category>/<test_name>/test.md`).
-   - Read and parse each test file's fields (`## Description`, `## Priority`, `## Type`, `## Commands`/`## Steps`, `## Expected Output`).
-   - Inspect `.revv/Dockerfile` and any scripts in `.revv/helpers/`.
+1. **Read the commit history:**
+   ```bash
+   git log --oneline -N
+   ```
+   Where N defaults to 10. Read each commit message — look for:
+   - New features or commands added
+   - Bug fixes (may need regression tests)
+   - Refactors (tests may need updated paths/commands)
+   - Deleted features (tests should be removed)
+   - Dependency changes (Dockerfile may need updating)
 
-2. **Commit History:**
-   - Execute `git log --oneline -N` where N defaults to 10 (or is overridden by user specification).
-   - Analyze commit messages to understand recent features, bug fixes, or refactorings.
+2. **Read the current test suite:**
+   ```bash
+   find .revv -name "test.md" | sort
+   ```
+   For each test, read its `## Commands` or `## Steps` and understand what it actually checks.
 
-3. **Codebase Tree and Source Code:**
-   - Map the current layout of the source code (files and directories).
-   - If specific components or API endpoints have changed, locate their implementations.
+3. **Map the code tree:**
+   ```bash
+   find . -maxdepth 3 -not -path './.git/*' -not -path './node_modules/*'
+   ```
+   Look for new files, deleted files, or moved files that tests might reference.
 
-4. **Additional Markdown Files:**
-   - Examine any system or documentation updates that describe new architectural decisions or user guides.
+4. **Read documentation:**
+   - `README.md`, `CONTRIBUTING.md`, `AGENTS.md`
+   - Any new docs that describe changed behavior
 
-## Output
+## Step 2: Audit Every Existing Test
 
-Your output must be a clear list of actions for every existing test file, along with proposals for new test definitions. For each test, you must decide to:
+For EACH test.md file in `.revv/`, make one of three decisions:
 
-1. **KEEP**: If the test is still valid and fully covers the corresponding codebase functionality.
-2. **UPDATE**: If the test is still relevant but requires modifications (e.g. command arguments changed, output format changed, priority needs adjustments, new setup steps required). You must provide the updated file content.
-3. **DELETE**: If the test is no longer applicable (e.g. the associated feature or code path was completely removed).
+### ✅ KEEP — Test is still valid
+The code it tests hasn't changed. The commands still work. The expected output is still correct.
 
-Additionally, suggest any new tests (with full test definitions in `test.md` format) that should be added to cover recent changes identified in the commit log or codebase structure.
+No action needed. Don't touch it.
+
+### ✏️ UPDATE — Test needs changes
+The test is still relevant but something drifted. Common reasons:
+
+| What changed | What to update |
+|---|---|
+| CLI flag renamed (`-v` → `--verbose`) | Update `## Commands` |
+| Function moved to different package | Update test description |
+| Output format changed (text → JSON) | Update `## Expected Output` |
+| Build tool changed (`go build` → `make build`) | Update `## Commands` |
+| Feature became critical path | Change priority `warning` → `blocking` |
+| New setup step required (DB, env var) | Add `## Setup` section |
+
+### 🗑️ DELETE — Test is dead
+The feature it tests no longer exists. Common reasons:
+
+- The code path was completely removed
+- The CLI command was deleted
+- The API endpoint was deprecated and removed
+- The test was for a third-party dependency that was replaced
+
+**Don't delete tests just because they seem redundant.** Only delete if the thing being tested is genuinely gone.
+
+## Step 3: Propose New Tests
+
+After auditing existing tests, check if the recent commits introduced anything that isn't covered:
+
+- **New CLI command or flag** → needs a sanity test
+- **New API endpoint** → needs an integration test
+- **Bug fix** → needs a regression test (fails before fix, passes after)
+- **New dependency** → Dockerfile may need updating
+- **New config option** → needs a test that exercises it
+
+Follow the same test format and categories from the [init-repo skill](https://raw.githubusercontent.com/vssinghh/revv/main/skills/init-repo/SKILL.md).
+
+## Step 4: Update the Dockerfile
+
+Check if `.revv/Dockerfile` needs changes:
+
+| Code change | Dockerfile update needed |
+|---|---|
+| Go version bumped in `go.mod` | Update base image (`golang:1.22-alpine` → `golang:1.23-alpine`) |
+| New system dependency (e.g., `libssl`) | Add `RUN apk add --no-cache libssl-dev` |
+| Package manager changed (`npm` → `pnpm`) | Update install command |
+| New build step added | Add `RUN` command |
+| Source directory restructured | Update `COPY` paths |
+
+If nothing changed that affects the build environment, leave the Dockerfile alone.
+
+## Step 5: Present the Review
+
+### Summary Table
+
+Present this FIRST so the developer can see all decisions at a glance:
+
+```markdown
+| Test Path | Action | Reason |
+|-----------|--------|--------|
+| .revv/build/compile_check/test.md | ✅ KEEP | Build command unchanged |
+| .revv/sanity/cli_help/test.md | ✏️ UPDATE | New `--json` flag added to help output |
+| .revv/integration/xml_parser/test.md | 🗑️ DELETE | XML parsing removed in commit abc1234 |
+| .revv/regression/json_edge_case/test.md | 🆕 NEW | Bug fix in commit def5678 needs regression test |
+```
+
+### Detailed Changes
+
+For each UPDATE and NEW action, show the exact file content:
+
+```markdown
+### ✏️ UPDATE: .revv/sanity/cli_help/test.md
+
+**Reason:** Commit `abc1234` added `--json` flag. Help output now includes it.
+
+**Change:** Added `--json` to the grep check in Commands.
+
+[Full updated test.md content here]
+```
+
+For each DELETE, explain why:
+
+```markdown
+### 🗑️ DELETE: .revv/integration/xml_parser/test.md
+
+**Reason:** XML import feature completely removed in commit `def5678`.
+The `internal/xml/` package no longer exists.
+```
 
 ## Rules
 
-### 1. Minimal Disruption Principle
-- Preserve relevant tests whenever possible. Do not rewrite test logic or descriptions unless they are outdated or incorrect.
-- Only modify what is directly affected by codebase changes. Unrelated tests must remain untouched to prevent regression or loss of history.
-- Ensure that the logic remains correct under the updated state of the codebase.
+### Minimal Disruption Principle
+- Preserve relevant tests whenever possible. Don't rewrite something that's working.
+- Only modify what is directly affected by codebase changes.
+- If you're unsure whether a test is still valid, KEEP it and note your uncertainty.
 
-### 2. Decision Justification
-For every test that is updated or deleted, you must provide a brief, technical explanation referencing the codebase change or commit that prompted the decision. For example:
-- "Updated `.revv/build/compile_check/test.md` because the build tool was switched from `go` to `make`."
-- "Deleted `.revv/unit/json_parsing/test.md` because the deprecated JSON parsing library was replaced by standard library encoders."
+### Decision Justification
+Every UPDATE and DELETE must reference a specific commit or code change. Don't say "updated for consistency." Say "updated because commit `abc1234` renamed the `--verbose` flag to `-v`."
 
-### 3. Test MD Format Compliance
-Any updated or proposed new test must strictly follow the `revv` test format:
-- `## Description`: Clear intent and validation reason.
-- `## Priority`: Either `blocking` or `warning`.
-- `## Type`: Either `automated` or `browser`.
-- `## Commands` (if Type is `automated`): Bash commands to run within the Docker container sandbox.
-- `## Steps` (if Type is `browser`): Step-by-step instructions.
-- `## Expected Output`: Successful validation criteria.
+### Test MD Format Compliance
+Any updated or new test must follow the standard format:
+- `## Description`: What it tests and why it matters
+- `## Priority`: `blocking` or `warning`
+- `## Type`: `automated` or `browser`
+- `## Commands` (if automated): Real shell commands, exit 0 = pass
+- `## Steps` (if browser): Numbered steps for Chrome DevTools
+- `## Expected Output`: What success looks like
 
-### 4. Dockerfile and Helper Alignment
-- If build configurations or project dependencies have changed in the codebase (e.g., node version bumped, package manager changed to pnpm), make sure to update `.revv/Dockerfile` accordingly.
-- Keep helper scripts in `.revv/helpers/` up to date.
+### Don't Over-Update
+If 10 commits happened and only 2 affect tests, you should have ~2 updates and ~8 KEEPs. A review that changes everything is suspicious. Question it.
 
-### 5. Concrete Examples of Actions
-
-#### Example 1: UPDATE action
-*Old test:*
-```markdown
-## Description
-Verify output of CLI version flag.
-
-## Priority
-warning
-
-## Type
-automated
-
-## Commands
-```bash
-./bin/myapp -version
-```
-
-## Expected Output
-Prints version information and exits with 0.
-```
-
-*Code Change:* The app was updated to use `--version` instead of `-version`.
-*Action:* UPDATE the commands block.
-*New Commands block:*
-```bash
-./bin/myapp --version
-```
-
-#### Example 2: DELETE action
-*Old test:* `.revv/unit/xml_parser/test.md`
-*Code Change:* The XML import features were completely removed from the codebase.
-*Action:* DELETE the test since there is no XML parsing feature to verify anymore.
-
-### 6. Review Interface
-- Present a summary table of the planned updates:
-  | Test Path | Action (Keep/Update/Delete) | Reason |
-  | --- | --- | --- |
-- Under the summary table, output the exact file modifications or new files to be written.
+### AGENTS.md
+Check if the AGENTS.md revv section is still accurate. If new skills were added or URLs changed, update it. If it's fine, leave it alone.

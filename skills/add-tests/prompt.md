@@ -1,96 +1,184 @@
 # Skill Prompt: Add Tests
 
-This prompt guides the process of determining if new QA tests are required to cover recent code modifications and, if so, adding them to the `.revv/` suite in the correct format.
+You are reviewing a PR or commit to decide: does this change need new tests? Your job is to look at what changed, check if existing tests already cover it, and if not, write the test.
 
-## Context
+## Step 1: Understand the Change
 
-When this skill is triggered, you must perform the following analysis:
+Read the diff to understand what the developer actually changed:
 
-1. **Detect Changes (Git Diff):**
-   - Retrieve the change diff of the current working copy or recent commits.
-   - Run `git diff HEAD~1` to see the changes in the last commit, or `git diff main...HEAD` (or target branch) for a pull request diff.
-   - Analyze the files modified: are they source files (`.go`, `.js`, `.py`, etc.), build configurations, or documentation?
+```bash
+# For the last commit:
+git diff HEAD~1
 
-2. **Inspect Existing `.revv/` Tests:**
-   - Scan the existing `.revv/` test structure to understand what coverage is already present.
-   - Map existing test definitions to modified code files to check if existing tests already cover the logic.
+# For a PR (changes since branching from main):
+git diff main...HEAD
 
-3. **Codebase Tree and Markdown Files:**
-   - Verify the location of the modifications inside the codebase structure.
-   - Check if new features or APIs have been described in recently updated markdown documentation.
-
-## Output
-
-Your output must consist of a clear decision and corresponding actions:
-
-1. **Decision on Test Necessity:**
-   - State clearly whether new tests are needed to cover the changes.
-   - **If YES**: Specify which files are being added and in what directories (e.g. `.revv/unit/new_feature/test.md`).
-   - **If NO**: Provide a detailed explanation justifying why no new tests are necessary (e.g. "Only refactored internal helper comments without changing execution behavior", or "The existing test `.revv/build/compile_check/test.md` already covers this change").
-
-2. **Test File Creation:**
-   - If tests are needed, write the complete, valid `test.md` content for each proposed test, matching the standard `revv` format.
-
-## Rules
-
-### 1. Decision Criteria (When to Add Tests)
-- **Feature Additions**: Any new command-line option, API endpoint, logic branch, or module **must** have at least one corresponding test.
-- **Bug Fixes**: A bug fix should have a regression test that fails prior to the fix and passes after the fix.
-- **Pure Refactoring**: If code structure changes but behavior does not, verify existing tests cover it and explain why new ones are not needed.
-- **Documentation/Style changes**: Do not add tests for changes that do not affect code compilation or execution.
-
-### 2. Test Placement and Categories
-- Place tests in appropriate subdirectories under `.revv/` based on their category:
-  - `build/`: Compilations and sanity checks.
-  - `unit/`: Narrow testing of components or individual functions.
-  - `integration/`: Testing interactions between systems.
-  - `browser/`: Web UI workflows.
-
-### 3. Test MD Format Compliance
-Every created test must follow the standard `revv` format:
-- `## Description`: Summary of target behavior.
-- `## Priority`: `blocking` or `warning`.
-- `## Type`: `automated` or `browser`.
-- `## Commands` (if automated) or `## Steps` (if browser).
-- `## Expected Output`: Verifiable outcome.
-
-### 4. Concrete Examples of Test Decisions
-
-#### Example 1: New CLI Parameter Added
-*Diff:*
-```diff
---- a/cmd/app/main.go
-+++ b/cmd/app/main.go
-+ var timeout = flag.Duration("timeout", 5*time.Second, "operation timeout")
+# If uncommitted changes:
+git diff
 ```
-*Decision:* YES, add test.
-*New Test File:* `.revv/unit/cli_timeout/test.md`
+
+Classify each changed file:
+
+| File type | Test implication |
+|---|---|
+| Source code (`.go`, `.js`, `.py`, `.rs`) | Likely needs tests |
+| Build config (`Makefile`, `package.json`, `go.mod`) | May need build test update |
+| Documentation (`README.md`, `CONTRIBUTING.md`) | No tests needed |
+| Test files (`*_test.go`, `*.test.js`) | No revv tests needed (they ARE tests) |
+| CI/CD (`.github/workflows/`) | No tests needed |
+| Config (`.env.example`, `.gitignore`) | No tests needed |
+
+## Step 2: Check Existing Coverage
+
+Read the current test suite:
+
+```bash
+find .revv -name "test.md" | sort
+```
+
+For each changed source file, ask:
+1. Is there already a test that exercises this code path?
+2. Would the existing test catch a regression if this change broke something?
+3. Does the existing test need updating (e.g., new flag, changed output)?
+
+Map the changes to existing tests. If coverage exists, no new test needed.
+
+## Step 3: Make the Decision
+
+### Decision on Test Necessity
+
+State clearly: **YES, add tests** or **NO, existing coverage is sufficient.**
+
+### If YES — write the tests
+
+For each new test, provide:
+
+1. **Justification**: What changed and why existing tests don't cover it
+2. **Test path**: Where it goes (e.g., `.revv/regression/nil_pointer_fix/test.md`)
+3. **Full test.md content**: Complete, valid, ready to write to disk
+
+### If NO — explain why
+
+Don't just say "no tests needed." Explain specifically:
+
+- "The change in `parser.go` only renames an internal variable. The existing test `.revv/integration/parser_integration/test.md` already tests the parse output, which is unchanged."
+- "This is a documentation-only change (`README.md`). No code behavior changed."
+- "The refactor in `runner.go` moves code between functions but the public API is identical. Existing tests in `.revv/integration/runner_pipeline/test.md` cover the same entry points."
+
+## Decision Criteria
+
+### Always add tests for:
+
+1. **New features**: Any new CLI command, flag, API endpoint, or user-facing behavior
+   ```diff
+   + rootCmd.AddCommand(newLintCmd())
+   ```
+   → Add `.revv/sanity/lint_command/test.md`
+
+2. **Bug fixes**: The fix should have a regression test that would catch the bug if it reappeared
+   ```diff
+   - if len(items) > 0 {
+   + if len(items) >= 0 {
+   ```
+   → Add `.revv/regression/empty_items_fix/test.md`
+
+3. **New error handling**: If a new error path was added, test that it returns the right error
+   ```diff
+   + if cfg == nil {
+   +   return fmt.Errorf("config file not found")
+   + }
+   ```
+   → Add `.revv/regression/missing_config_error/test.md`
+
+4. **Changed output format**: If the output shape changed, existing tests may pass but miss the regression
+   ```diff
+   - fmt.Printf("Version: %s\n", version)
+   + fmt.Printf(`{"version": "%s"}\n`, version)
+   ```
+   → Update existing test OR add new one for JSON format
+
+5. **New dependencies**: If a new package/tool is required, the Dockerfile may need updating and a build test should verify it
+
+### Never add tests for:
+
+1. **Documentation-only changes**: README, CONTRIBUTING, comments, docstrings
+2. **Style/formatting**: Code reformatting, import reordering, whitespace
+3. **CI/CD changes**: Workflow files, Dockerfiles not in `.revv/`
+4. **Existing test changes**: If someone modifies `*_test.go` files, those are already tests
+
+### Use judgment for:
+
+1. **Refactoring**: If behavior is unchanged, existing tests should cover it. But if the refactor changes internal APIs that tests reference, update the test commands.
+2. **Dependency bumps**: Usually no test needed unless the bump changes behavior or requires a Dockerfile update.
+3. **Config file changes**: If a new config option is added and the app reads it, consider a test.
+
+## Test Writing Rules
+
+Follow the same format as [init-repo](https://raw.githubusercontent.com/vssinghh/revv/main/skills/init-repo/SKILL.md):
+
+### Test MD Format Compliance
+
 ```markdown
 ## Description
-Verify CLI accepts custom timeout duration.
+[What this test verifies and why. Reference the commit/PR that motivated it.]
 
 ## Priority
-blocking
+[blocking | warning]
 
 ## Type
-automated
+[automated | browser]
 
 ## Commands
 ```bash
-./bin/myapp --timeout 10s
+[Real commands. Exit 0 = pass.]
 ```
 
 ## Expected Output
-Exits with code 0 without timeout errors.
+[What success looks like.]
 ```
 
-#### Example 2: Documentation Typo Corrected
-*Diff:*
-```diff
---- a/README.md
-+++ b/README.md
-- This is a exmple of the app.
-+ This is an example of the app.
+### Category Placement
+
+| Change type | Category |
+|---|---|
+| New build requirement | `build/` |
+| New CLI command/flag | `sanity/` |
+| New API/service interaction | `integration/` |
+| Bug fix | `regression/` |
+| Security-related | `security/` |
+| UI change | `browser/` |
+
+### Naming
+
+The directory name IS the test name. Make it descriptive:
+- ✅ `regression/nil_pointer_parser_fix`
+- ✅ `sanity/json_output_flag`
+- ❌ `test1`
+- ❌ `new_test`
+
+## Output Format
+
+Present your decision clearly:
+
+```markdown
+## Decision: [YES | NO]
+
+### Justification
+[Why tests are or aren't needed, referencing specific files and changes]
+
+### Changes to existing tests
+[If any existing tests need updating, list them with the specific changes]
+
+### New tests
+[If adding tests, show the full test.md for each]
+
+### Dockerfile changes
+[If the Dockerfile needs updating, show the change]
 ```
-*Decision:* NO, do not add test.
-*Explanation:* The changes are restricted entirely to user documentation in `README.md` and do not alter the compilation or runtime behavior of the software.
+
+## Edge Cases
+
+- **Multiple unrelated changes in one PR**: Evaluate each change independently. Some may need tests, others may not.
+- **Reverted commit**: If a commit was reverted, check if any tests were added for the original commit. They may now need to be deleted.
+- **Merge commits**: Skip merge commits — they don't introduce new code.
+- **Large refactors**: If 20+ files changed but behavior is the same, don't add 20 tests. Verify existing tests pass and explain why no new tests are needed.

@@ -207,8 +207,8 @@ func TestRedesignE2E(t *testing.T) {
 
 		t.Run("TC_1_2_4_UpdateRepoPromptSections", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "update-repo")
-			assertContains(t, content, "## Context", "Context section")
-			assertContains(t, content, "## Output", "Output section")
+			assertContains(t, content, "## Step 1: Understand What Changed", "Context section")
+			assertContains(t, content, "## Step 2: Audit Every Existing Test", "Output section")
 			assertContains(t, content, "## Rules", "Rules section")
 		})
 
@@ -245,9 +245,9 @@ func TestRedesignE2E(t *testing.T) {
 
 		t.Run("TC_1_3_4_AddTestsPromptSections", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "add-tests")
-			assertContains(t, content, "## Context", "Context section")
-			assertContains(t, content, "## Output", "Output section")
-			assertContains(t, content, "## Rules", "Rules section")
+			assertContains(t, content, "## Step 1: Understand the Change", "Context section")
+			assertContains(t, content, "## Step 3: Make the Decision", "Output section")
+			assertContains(t, content, "## Decision Criteria", "Rules section")
 		})
 
 		t.Run("TC_1_3_5_AddTestsPromptGitDiff", func(t *testing.T) {
@@ -451,14 +451,14 @@ name: init-repo
 
 		t.Run("TC_2_2_3_UpdateRepoNoChangesIdempotency", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "update-repo")
-			assertContains(t, content, "remain untouched", "idempotency instruction")
+			assertContains(t, content, "Don't touch it", "idempotency instruction")
 			assertContains(t, content, "Only modify", "idempotency instruction")
 		})
 
 		t.Run("TC_2_2_4_UpdateRepoExclusionPaths", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "update-repo")
-			assertContains(t, content, "Codebase Tree", "Git tree context check")
-			assertContains(t, content, "layout", "Git tree context check")
+			assertContains(t, content, "code tree", "Git tree context check")
+			assertContains(t, content, "find .", "Git tree context check")
 		})
 
 		t.Run("TC_2_2_5_UpdateRepoSkillFrontmatterName", func(t *testing.T) {
@@ -479,19 +479,19 @@ name: init-repo
 		// --- Add-Tests Boundary Cases ---
 		t.Run("TC_2_3_1_AddTestsEmptyDiff", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "add-tests")
-			assertContains(t, content, "no new tests", "Empty diff behavior")
-			assertContains(t, content, "necessary", "Empty diff behavior")
+			assertContains(t, content, "No tests needed", "Empty diff behavior")
+			assertContains(t, content, "No code behavior changed", "Empty diff behavior")
 		})
 
 		t.Run("TC_2_3_2_AddTestsNonCodeDiff", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "add-tests")
-			assertContains(t, content, "Documentation/Style changes", "Non-code diff handling instruction")
+			assertContains(t, content, "Documentation-only changes", "Non-code diff handling instruction")
 		})
 
 		t.Run("TC_2_3_3_AddTestsMassiveDiff", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "add-tests")
-			assertContains(t, content, "directories", "Massive diff handling")
-			assertContains(t, content, "Categories", "Massive diff handling")
+			assertContains(t, content, "Large refactors", "Massive diff handling")
+			assertContains(t, content, "Category", "Massive diff handling")
 		})
 
 		t.Run("TC_2_3_4_AddTestsUninitializedRepo", func(t *testing.T) {
@@ -507,7 +507,7 @@ name: init-repo
 
 		t.Run("TC_2_3_6_AddTestsPlacementPaths", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "add-tests")
-			assertContains(t, content, "Place tests in appropriate subdirectories", "Test placement instruction")
+			assertContains(t, content, "Category Placement", "Test placement instruction")
 		})
 
 		// --- Run-Tests Boundary Cases ---
@@ -632,7 +632,7 @@ name: init-repo
 		t.Run("TC_4_2_FeatureDevAutomatedFlow", func(t *testing.T) {
 			contentAdd, _ := readPromptFile(t, root, "add-tests")
 			contentRun, _ := readPromptFile(t, root, "run-tests")
-			assertContains(t, contentAdd, "propose", "add-tests proposes tests")
+			assertContains(t, contentAdd, "New features", "add-tests proposes tests")
 			assertContains(t, contentAdd, "new tests", "add-tests proposes tests")
 			assertContains(t, contentRun, "containers", "run-tests runs automated tests inside Docker")
 		})
@@ -651,8 +651,8 @@ name: init-repo
 
 		t.Run("TC_4_5_MultiCommitSyncMaintenanceFlow", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "update-repo")
-			assertContains(t, content, "UPDATE the commands", "update-repo handles command changes")
-			assertContains(t, content, "DELETE the test", "update-repo deletes stale tests")
+			assertContains(t, content, "UPDATE", "update-repo handles command changes")
+			assertContains(t, content, "DELETE", "update-repo deletes stale tests")
 		})
 
 		t.Run("TC_4_6_ContributorOnboardingFlow", func(t *testing.T) {
