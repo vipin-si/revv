@@ -26,7 +26,18 @@ Before running anything, understand what you're working with:
 4. **Run `add-tests` first.**
    Before executing, read the [add-tests skill](https://raw.githubusercontent.com/vssinghh/revv/main/skills/add-tests/SKILL.md) and follow its instructions. This checks if the current changes need new tests. If it generates new tests, include them in this run.
 
-## Step 2: Run Automated Tests
+## Execution Flow — Two Phases
+
+Running tests happens in TWO mandatory phases. You MUST complete both:
+
+1. **Phase 1 — Automated tests**: Run `revv exec` to execute all `automated` tests in Docker containers. The binary handles parallelism, isolation, and result collection.
+2. **Phase 2 — Browser tests**: After `revv exec` finishes, YOU must run every `browser` test yourself via Chrome DevTools MCP. The binary CANNOT run these — it skips them. If you stop after Phase 1, browser tests are untested.
+
+**Do not report results until both phases are complete.**
+
+---
+
+## Step 2: Phase 1 — Run Automated Tests (via Go binary)
 
 Automated tests (`## Type: automated`) run inside Docker containers via the Go binary.
 
@@ -45,7 +56,7 @@ fi
 ### Execute
 
 ```bash
-revv exec --verbose --json
+revv exec --verbose
 ```
 
 Key flags:
@@ -62,7 +73,8 @@ Key flags:
 3. It spins up parallel Docker containers — one per test
 4. Each container runs the `## Commands` from the test.md
 5. Exit code 0 = pass, non-zero = fail
-6. Results are collected and returned as JSON
+6. Results are collected and returned
+7. **Browser tests are SKIPPED** — they show as `SKIP (no commands)` in the output
 
 ### Important
 
@@ -70,7 +82,17 @@ Key flags:
 - If Docker is not running, tell the user: "Docker is required for automated tests. Please start Docker Desktop and try again."
 - If the Dockerfile build fails, report it as a blocking failure with the build log.
 
-## Step 3: Run Browser Tests
+---
+
+## Step 3: Phase 2 — Run Browser Tests (via Chrome DevTools MCP)
+
+**This step is MANDATORY.** The Go binary skipped all browser tests. Now you must run them.
+
+Check the `revv exec` output for lines like:
+```
+─ browser/readme_accuracy    warning    SKIP   (no commands)
+```
+Each of those is a browser test you must execute now.
 
 Browser tests (`## Type: browser`) run via Chrome DevTools MCP tools directly in the IDE.
 

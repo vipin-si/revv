@@ -285,8 +285,8 @@ func TestRedesignE2E(t *testing.T) {
 		t.Run("TC_1_4_4_RunTestsPromptSections", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "run-tests")
 			assertContains(t, content, "## Step 1: Gather Context", "Context section")
-			assertContains(t, content, "## Step 2: Run Automated Tests", "Automated section")
-			assertContains(t, content, "## Step 3: Run Browser Tests", "Browser section")
+			assertContains(t, content, "## Step 2: Phase 1", "Automated section")
+			assertContains(t, content, "## Step 3: Phase 2", "Browser section")
 		})
 
 		t.Run("TC_1_4_5_RunTestsPromptDelegation", func(t *testing.T) {
@@ -645,7 +645,7 @@ name: init-repo
 
 		t.Run("TC_4_4_UiChangeBrowserAutomationFlow", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "run-tests")
-			assertContains(t, content, "## Step 3: Run Browser Tests", "run-tests supports browser tests")
+			assertContains(t, content, "## Step 3: Phase 2", "run-tests supports browser tests")
 			assertContains(t, content, "Chrome DevTools", "run-tests uses Chrome DevTools")
 		})
 
