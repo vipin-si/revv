@@ -167,6 +167,11 @@ func TestExtractCodeBlock(t *testing.T) {
 			input:    "```\n```",
 			expected: "",
 		},
+		{
+			name:     "multiple blocks",
+			input:    "```bash\necho 1\n```\nSome intermediate text\n```bash\necho 2\n```",
+			expected: "echo 1\necho 2",
+		},
 	}
 
 	for _, tt := range tests {
@@ -190,4 +195,106 @@ func containsSubstring(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+func TestNormalizeType(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"automated", "automated"},
+		{"auto", "automated"},
+		{"docker", "automated"},
+		{"command", "automated"},
+		{"commands", "automated"},
+		{"browser", "browser"},
+		{"ui", "browser"},
+		{"e2e", "browser"},
+		{"visual", "browser"},
+		{"manual", "manual"},
+		{"human", "manual"},
+		{"steps", "manual"},
+		{"anything_else", "automated"},
+	}
+
+	for _, tt := range tests {
+		got := normalizeType(tt.input)
+		if got != tt.expected {
+			t.Errorf("normalizeType(%q) = %q, expected %q", tt.input, got, tt.expected)
+		}
+	}
+}
+
+func TestParseTestMD_TypeNormalization(t *testing.T) {
+	content := `## Description
+Test type parsing.
+
+## Type
+ui
+
+## Commands
+echo "run ui"
+`
+	pt, err := ParseTestMD(content)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if pt.Type != "browser" {
+		t.Errorf("expected Type 'browser' from 'ui', got %q", pt.Type)
+	}
+	// Since type is browser (not automated), NoCommands should be true (skipped by default execution)
+	if !pt.NoCommands {
+		t.Errorf("expected NoCommands=true for non-automated test, got false")
+	}
+
+	// Test default inference: no type, but has commands -> automated
+	contentDefaultAuto := `## Description
+Test inference.
+## Commands
+echo "hello"
+`
+	pt2, err := ParseTestMD(contentDefaultAuto)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if pt2.Type != "automated" {
+		t.Errorf("expected Type 'automated', got %q", pt2.Type)
+	}
+
+	// Test default inference: no type, no commands -> manual
+	contentDefaultManual := `## Description
+Test inference.
+`
+	pt3, err := ParseTestMD(contentDefaultManual)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if pt3.Type != "manual" {
+		t.Errorf("expected Type 'manual', got %q", pt3.Type)
+	}
+}
+
+func TestParseTestMD_HeaderHijacking(t *testing.T) {
+	content := `## Description
+This is a test.
+
+## Commands
+` + "```bash" + `
+## Fake Header
+echo "inside code block"
+` + "```" + `
+
+## Expected Output
+PASS
+`
+	pt, err := ParseTestMD(content)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !contains(pt.Commands, "## Fake Header") {
+		t.Errorf("expected commands to contain hijacked header, got: %q", pt.Commands)
+	}
+	if _, ok := parseSections(content)["fake header"]; ok {
+		t.Error("expected 'fake header' section to NOT be parsed")
+	}
 }

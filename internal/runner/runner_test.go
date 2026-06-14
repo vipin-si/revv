@@ -253,4 +253,86 @@ echo pass
 	if len(results) > 0 && results[0].Category != "unit" {
 		t.Errorf("expected category 'unit', got %q", results[0].Category)
 	}
+
+	// Filter by specific test
+	results, err = RunAll(context.Background(), executor, dir, FilterOpts{Test: "lint/test2"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(results) != 1 {
+		t.Errorf("expected 1 result with test filter, got %d", len(results))
+	}
+	if len(results) > 0 && results[0].Name != "test2" {
+		t.Errorf("expected name 'test2', got %q", results[0].Name)
+	}
+}
+
+func TestTestInfo_ErrorPath(t *testing.T) {
+	//filepath.Rel will fail with one absolute path and one relative path
+	cat, name := TestInfo("relative/path", "/absolute/path")
+	if cat != "unknown" || name != "unknown" {
+		t.Errorf("expected unknown/unknown, got %q/%q", cat, name)
+	}
+
+	// Test case where parts has length 1
+	// E.g. filepath.Rel("/repo/.revv", "/repo/.revv/test.md") -> rel="test.md"
+	// parts = ["test.md"]
+	cat, name = TestInfo("/repo/.revv", "/repo/.revv/test.md")
+	if cat != "default" || name != "test" {
+		t.Errorf("expected default/test, got %q/%q", cat, name)
+	}
+}
+
+func TestRunTest_ExecError(t *testing.T) {
+	executor := &mockExecutor{
+		err: os.ErrPermission,
+	}
+	content := `## Description
+Test exec error.
+## Commands
+echo hello
+`
+	res := RunTest(context.Background(), executor, "unit", "test", content)
+	if res.Passed {
+		t.Errorf("expected failure when exec returns error")
+	}
+	if !contains(res.Error, "execution error") {
+		t.Errorf("expected 'execution error' in error message, got %q", res.Error)
+	}
+}
+
+func TestRunAll_FileReadError(t *testing.T) {
+	dir := t.TempDir()
+	testFile := filepath.Join(dir, "unit", "build_check", "test.md")
+	if err := os.MkdirAll(filepath.Dir(testFile), 0755); err != nil {
+		t.Fatalf("failed to create directory: %v", err)
+	}
+
+	// Write file with no permissions (unreadable)
+	if err := os.WriteFile(testFile, []byte("## Description"), 0000); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
+	// Make sure we restore permissions so cleanup can succeed
+	defer os.Chmod(testFile, 0644)
+
+	executor := &mockExecutor{
+		result: &ExecResult{ExitCode: 0},
+	}
+
+	results, err := RunAll(context.Background(), executor, dir, FilterOpts{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+
+	if results[0].Passed {
+		t.Errorf("expected test to fail when file cannot be read")
+	}
+	if results[0].Error != "failed to read test file" {
+		t.Errorf("expected 'failed to read test file' error, got %q", results[0].Error)
+	}
 }

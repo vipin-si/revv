@@ -56,6 +56,23 @@ type jsonSummary struct {
 }
 
 func runExec(cmd *cobra.Command, args []string) error {
+	jsonMode, _ := cmd.Flags().GetBool("json")
+
+	err := runExecCore(cmd, args)
+	if err != nil {
+		if jsonMode {
+			payload := map[string]string{"error": err.Error()}
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "  ")
+			_ = enc.Encode(payload)
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+func runExecCore(cmd *cobra.Command, args []string) error {
 	verbose, _ := cmd.Flags().GetBool("verbose")
 	timeout, _ := cmd.Flags().GetDuration("timeout")
 	category, _ := cmd.Flags().GetString("category")

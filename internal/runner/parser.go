@@ -94,10 +94,14 @@ func parseSections(content string) map[string]string {
 
 	var currentSection string
 	var currentContent []string
+	inBlock := false
 
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "## ") {
+		if strings.HasPrefix(trimmed, "```") {
+			inBlock = !inBlock
+		}
+		if strings.HasPrefix(trimmed, "## ") && !inBlock {
 			// Save previous section
 			if currentSection != "" {
 				sections[currentSection] = strings.Join(currentContent, "\n")
@@ -117,7 +121,7 @@ func parseSections(content string) map[string]string {
 	return sections
 }
 
-// extractCodeBlock extracts the content of the first fenced code block (```...```).
+// extractCodeBlock extracts the content of all fenced code blocks (```...```) concatenated.
 func extractCodeBlock(content string) string {
 	lines := strings.Split(content, "\n")
 	var result []string
@@ -126,10 +130,7 @@ func extractCodeBlock(content string) string {
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 		if strings.HasPrefix(trimmed, "```") {
-			if inBlock {
-				break // end of block
-			}
-			inBlock = true
+			inBlock = !inBlock
 			continue
 		}
 		if inBlock {

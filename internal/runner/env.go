@@ -22,7 +22,7 @@ var shellBuiltins = map[string]bool{
 }
 
 // envVarPattern matches $VAR_NAME and ${VAR_NAME} in shell commands.
-var envVarPattern = regexp.MustCompile(`\$\{?([A-Z][A-Z0-9_]*)\}?`)
+var envVarPattern = regexp.MustCompile(`\$\{([a-zA-Z_][a-zA-Z0-9_]*)\}|\$([a-zA-Z_][a-zA-Z0-9_]*)`)
 
 // DetectEnvVars scans test.md contents for environment variable references,
 // checks which ones are set on the host, and returns them as KEY=VALUE pairs.
@@ -31,10 +31,22 @@ func DetectEnvVars(testContents []string, envFiles []string) ([]string, []EnvVar
 	// Collect all referenced variables
 	seen := make(map[string]bool)
 	for _, content := range testContents {
-		matches := envVarPattern.FindAllStringSubmatch(content, -1)
+		var textToScan string
+		pt, err := ParseTestMD(content)
+		if err != nil || pt.Commands == "" {
+			textToScan = content
+		} else {
+			textToScan = pt.Commands
+		}
+		matches := envVarPattern.FindAllStringSubmatch(textToScan, -1)
 		for _, m := range matches {
-			name := m[1]
-			if !shellBuiltins[name] {
+			var name string
+			if len(m) > 1 && m[1] != "" {
+				name = m[1]
+			} else if len(m) > 2 && m[2] != "" {
+				name = m[2]
+			}
+			if name != "" && !shellBuiltins[name] {
 				seen[name] = true
 			}
 		}
@@ -85,6 +97,38 @@ type EnvVarStatus struct {
 	Source string // "host" or ".env"
 }
 
+// stripInlineComment removes trailing inline comments from a line.
+func stripInlineComment(line string) string {
+	var sb strings.Builder
+	inSingleQuote := false
+	inDoubleQuote := false
+	escaped := false
+
+	for i := 0; i < len(line); i++ {
+		ch := line[i]
+		if escaped {
+			sb.WriteByte(ch)
+			escaped = false
+			continue
+		}
+		if ch == '\\' {
+			sb.WriteByte(ch)
+			escaped = true
+			continue
+		}
+		if ch == '\'' && !inDoubleQuote {
+			inSingleQuote = !inSingleQuote
+		} else if ch == '"' && !inSingleQuote {
+			inDoubleQuote = !inDoubleQuote
+		}
+		if ch == '#' && !inSingleQuote && !inDoubleQuote {
+			break
+		}
+		sb.WriteByte(ch)
+	}
+	return sb.String()
+}
+
 // loadEnvFile parses a simple .env file (KEY=VALUE, one per line, # comments).
 func loadEnvFile(path string, vars map[string]string) {
 	data, err := os.ReadFile(path)
@@ -92,8 +136,9 @@ func loadEnvFile(path string, vars map[string]string) {
 		return
 	}
 	for _, line := range strings.Split(string(data), "\n") {
+		line = stripInlineComment(line)
 		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") {
+		if line == "" {
 			continue
 		}
 		parts := strings.SplitN(line, "=", 2)

@@ -308,8 +308,11 @@ func createTarArchive(srcDir string) (io.ReadCloser, error) {
 				return nil
 			}
 
-			if d.IsDir() && d.Name() == ".git" {
-				return filepath.SkipDir
+			if d.IsDir() {
+				name := d.Name()
+				if name == ".git" || name == ".agents" || name == "node_modules" {
+					return filepath.SkipDir
+				}
 			}
 
 			fi, err := d.Info()

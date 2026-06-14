@@ -10,17 +10,17 @@ revv replaces manual PR review with automated tests that run inside Docker conta
 Contributor says "revv run" in their IDE
         │
         ▼
-┌─────────────────────────────────┐
-│ IDE reads AGENTS.md             │
-│ Fetches latest skill from       │
-│ github.com/vssinghh/revv        │
-│                                 │
-│ 1. Checks if tests need updates │
-│ 2. Runs automated tests (Docker)│
-│ 3. Runs browser tests (Chrome)  │
-│ 4. Analyzes failures            │
-│ 5. Reports results              │
-└─────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│ IDE reads AGENTS.md                          │
+│ Fetches latest skills from                   │
+│ github.com/vssinghh/revv                     │
+│                                              │
+│ 1. Runs run-tests skill                      │
+│ 2. Triggers add-tests to find new tests      │
+│ 3. Runs automated tests (revv exec in Docker)│
+│ 4. Runs browser tests (Chrome DevTools MCP)  │
+│ 5. Analyzes failures & reports results       │
+└──────────────────────────────────────────────┘
 ```
 
 **No API key. No binary install. No setup.** Contributors just clone and say "revv run".
@@ -31,7 +31,7 @@ Contributor says "revv run" in their IDE
 
 Open your IDE (Antigravity, Claude Code, Cursor, Codex) and paste this prompt:
 
-> Read https://raw.githubusercontent.com/vssinghh/revv/main/skills/revv-update/SKILL.md and follow the instructions to set up automated QA for this repo.
+> Read https://raw.githubusercontent.com/vssinghh/revv/main/skills/init-repo/SKILL.md and follow the instructions to set up automated QA for this repo.
 
 Your IDE will:
 1. Fetch the latest revv instructions
@@ -136,21 +136,21 @@ A test.md with `## Steps` is executed by the IDE's browser automation:
 ## Architecture
 
 ```
-IDE Skill (the brain)
+IDE Skills (the brain)
 │
-├── "revv update"  → LLM generates/updates .revv/ tests
-│
-├── "revv run"
-│   ├── Automated tests → binary (fast, parallel Docker containers)
-│   ├── Browser tests   → IDE directly (Chrome DevTools MCP)
-│   └── Analyze results → LLM explains failures, suggests fixes
+├── "revv init"      → LLM runs init-repo to set up config and Dockerfile
+├── "revv update"    → LLM runs update-repo to sync existing tests with commit history
+├── "revv add-tests" → LLM runs add-tests to generate new tests for local diff
+└── "revv run"       → LLM runs run-tests to execute automated/browser tests
 ```
 
 | Component | What | Why |
 |-----------|------|-----|
-| [`revv-update`](skills/revv-update/SKILL.md) | Generates `.revv/` tests | Needs LLM to understand code |
-| [`revv-run`](skills/revv-run/SKILL.md) | Orchestrates test execution | Needs LLM for browser tests + analysis |
-| `revv exec` (Go binary) | Parallel Docker test runner | Fast, no LLM needed, self-builds from source |
+| [`init-repo`](skills/init-repo/SKILL.md) | Initializes `.revv/` directory | Analyzes project layout & configurations to set up Dockerfile and base tests |
+| [`update-repo`](skills/update-repo/SKILL.md) | Updates existing `.revv/` tests | Scans commit logs and updates/deletes tests to reflect codebase evolution |
+| [`add-tests`](skills/add-tests/SKILL.md) | Generates new tests for local changes | Analyzes diff of current changes and builds tests targeting modified code |
+| [`run-tests`](skills/run-tests/SKILL.md) | Orchestrates execution of tests | Invokes add-tests, triggers Go execution, handles browser automation and failure analysis |
+| `revv exec` (Go binary) | Parallel Docker test runner | Fast, no LLM needed, runs automated tests in containers |
 
 Skills are fetched by the IDE from this repo via the `AGENTS.md` pointer. The binary is built from source automatically — no install.
 
