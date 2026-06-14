@@ -284,9 +284,9 @@ func TestRedesignE2E(t *testing.T) {
 
 		t.Run("TC_1_4_4_RunTestsPromptSections", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "run-tests")
-			assertContains(t, content, "## Context", "Context section")
-			assertContains(t, content, "## Output", "Output section")
-			assertContains(t, content, "## Rules", "Rules section")
+			assertContains(t, content, "## Step 1: Gather Context", "Context section")
+			assertContains(t, content, "## Step 2: Run Automated Tests", "Automated section")
+			assertContains(t, content, "## Step 3: Run Browser Tests", "Browser section")
 		})
 
 		t.Run("TC_1_4_5_RunTestsPromptDelegation", func(t *testing.T) {
@@ -315,8 +315,8 @@ func TestRedesignE2E(t *testing.T) {
 
 		t.Run("TC_1_4_9_RunTestsPromptFailureAnalysis", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "run-tests")
-			assertContains(t, content, "Failure Analysis and Reporting", "Failure Analysis header")
-			assertContains(t, content, "Diagnostics", "Failure Diagnostics steps")
+			assertContains(t, content, "## Step 4: Analyze Failures", "Failure Analysis header")
+			assertContains(t, content, "Root cause analysis", "Failure Diagnostics steps")
 		})
 
 		// --- F5. Repository Integrity & Metadata ---
@@ -519,7 +519,7 @@ name: init-repo
 
 		t.Run("TC_2_4_2_RunTestsNoChromeDevTools", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "run-tests")
-			assertContains(t, content, "Degraded/Fallback Mode", "DevTools unavailable instruction")
+			assertContains(t, content, "Fallback", "DevTools unavailable instruction")
 			assertContains(t, content, "browser - needs human verification", "DevTools unavailable fallback")
 		})
 
@@ -573,7 +573,8 @@ name: init-repo
 
 		t.Run("TC_2_4_6_RunTestsBinaryResolution", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "run-tests")
-			assertContains(t, content, "which revv || go build -o /tmp/revv", "Go binary resolution instruction")
+			assertContains(t, content, "which revv", "Go binary resolution instruction")
+			assertContains(t, content, "go build -o /tmp/revv", "Go binary build instruction")
 		})
 	})
 
@@ -638,13 +639,13 @@ name: init-repo
 
 		t.Run("TC_4_3_BugFixFailureAnalysisFlow", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "run-tests")
-			assertContains(t, content, "Failure Diagnostics", "run-tests provides failure diagnostics")
-			assertContains(t, content, "recommendation/fix", "run-tests suggests fixes")
+			assertContains(t, content, "Root cause analysis", "run-tests provides failure diagnostics")
+			assertContains(t, content, "Recommended fix", "run-tests suggests fixes")
 		})
 
 		t.Run("TC_4_4_UiChangeBrowserAutomationFlow", func(t *testing.T) {
 			content, _ := readPromptFile(t, root, "run-tests")
-			assertContains(t, content, "Browser Test Execution", "run-tests supports browser tests")
+			assertContains(t, content, "## Step 3: Run Browser Tests", "run-tests supports browser tests")
 			assertContains(t, content, "Chrome DevTools", "run-tests uses Chrome DevTools")
 		})
 

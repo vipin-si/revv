@@ -1,97 +1,210 @@
 # Skill Prompt: Run Tests
 
-This prompt guides the execution and evaluation of the repository's QA suite. It orchestrates test preparation, calls test-creation checks, and runs different types of tests using Go-based automation or browser automation.
+You are executing the QA test suite for a repository. Your job is to run every test, analyze every failure, and deliver a verdict that tells the developer exactly what's wrong and how to fix it.
 
-## Context
+## Step 1: Gather Context
 
-When this skill is triggered, you must perform the following discovery steps:
+Before running anything, understand what you're working with:
 
-1. **Locate Sandbox Configurations:**
-   - Inspect the `.revv/` directory, verifying the presence of `.revv/Dockerfile`, `.revv/helpers/`, and tests in subfolders.
-   - Verify the location of the codebase and key build scripts.
+1. **Verify `.revv/` exists.** If it doesn't, tell the user to run `revv init` first and stop.
 
-2. **Retrieve Commit Context & Pull Request Details:**
-   - Determine current changes (e.g. uncommitted files, recent commit history) to understand the delta.
+2. **Inventory the tests:**
+   ```bash
+   find .revv -name "test.md" | sort
+   ```
+   Read each test.md and categorize:
+   - `automated` tests → will be run via the Go binary in Docker
+   - `browser` tests → will be run via Chrome DevTools MCP
 
-3. **Check for New Tests:**
-   - Always call the `add-tests` skill first to determine if new tests need to be created or if any existing ones need updates before execution.
+3. **Check current changes:**
+   ```bash
+   git status --short
+   git log --oneline -5
+   ```
+   This tells you what the developer changed — useful for failure analysis later.
 
-## Output
+4. **Run `add-tests` first.**
+   Before executing, read the [add-tests skill](https://raw.githubusercontent.com/vssinghh/revv/main/skills/add-tests/SKILL.md) and follow its instructions. This checks if the current changes need new tests. If it generates new tests, include them in this run.
 
-Perform the following execution flow:
+## Step 2: Run Automated Tests
 
-1. **Pre-Execution Check:**
-   - Run the `add-tests` skill. Follow its instructions to add or modify test definitions if local codebase changes warrant it.
+Automated tests (`## Type: automated`) run inside Docker containers via the Go binary.
 
-2. **Categorize and Execute Tests:**
-   - **Automated Tests** (`## Type: automated`): Run them using the `revv` command-line tool.
-   - **Browser Tests** (`## Type: browser`): Execute them interactively using Chrome DevTools MCP tools. If Chrome DevTools is unavailable, print the steps for the user but still report the test as type `browser`.
+### Build the binary
 
-3. **Summary & Diagnostics:**
-   - Produce a detailed report summarizing passes, failures, duration, and blockers.
-   - Analyze any failures by investigating execution logs or screenshots, and propose precise code or test fixes.
+```bash
+# Check if revv is already available
+which revv 2>/dev/null
+if [ $? -ne 0 ]; then
+  # Build from source
+  go build -o /tmp/revv ./cmd/revv
+  export PATH="/tmp:$PATH"
+fi
+```
 
-## Rules
+### Execute
 
-### 1. Automated Test Execution Rules
+```bash
+revv exec --verbose --json
+```
 
-- **Go Binary Compilation**:
-  Before running automated tests, check if the `revv` binary is available in the path. If not, build it from the repository source and store it in `/tmp`:
-  ```bash
-  which revv || go build -o /tmp/revv ./cmd/revv
-  ```
-- **Execution Command**:
-  Execute tests in parallel using the `revv` execution engine. Ensure `--verbose` is provided to capture logs:
-  ```bash
-  /tmp/revv exec --verbose
-  ```
-  *(Note: If the `revv` command is globally installed, you can run `revv exec --verbose`).*
-- **Sandbox Environment**: All automated tests run within isolated Docker containers created based on the `.revv/Dockerfile` build definition. Do not attempt to run automated commands directly on the host system.
+Key flags:
+- `--verbose` — see each test's output as it runs
+- `--json` — get structured output for programmatic analysis
+- `--category <name>` — run only tests in a specific category (e.g., `--category build`)
+- `--test <category/name>` — run a single test (e.g., `--test build/compile_check`)
+- `--timeout <duration>` — override the default 5-minute timeout (e.g., `--timeout 10m`)
 
-### 2. Browser Test Execution Rules
+### What happens under the hood
 
-If any test is configured with `## Type: browser`, execute it directly via the agent's browser control tools (such as Chrome DevTools MCP plugins):
+1. The binary reads `.revv/Dockerfile` and builds a Docker image
+2. It discovers all `test.md` files where `## Type` is `automated`
+3. It spins up parallel Docker containers — one per test
+4. Each container runs the `## Commands` from the test.md
+5. Exit code 0 = pass, non-zero = fail
+6. Results are collected and returned as JSON
 
-- **Setup Phase**: Look for a `## Setup` section. If present, execute the commands (such as starting a local development server or spinning up database containers) before launching the browser.
-- **Interactions**:
-  - Open a tab and navigate to the application using `new_page` or `navigate_page`.
-  - Interact with elements using `click`, `fill`, or `type` selectors.
-  - Verify page state using `get_text` or `evaluate_javascript`.
-  - Take visual state captures using `screenshot` and embed or link them in the final test report.
-- **Degraded/Fallback Mode**: If Chrome DevTools MCP tools are unavailable in the current environment, print the browser test steps for the user. The test type remains `browser` and should be marked as "browser - needs human verification".
+### Important
 
-### 3. Failure Analysis and Reporting
+- **Do NOT run automated test commands directly on the host.** They run inside Docker.
+- If Docker is not running, tell the user: "Docker is required for automated tests. Please start Docker Desktop and try again."
+- If the Dockerfile build fails, report it as a blocking failure with the build log.
 
-- **Summary Structure**:
-  Present the results table at the top of your response:
-  | Category | Test Name | Type | Status (Pass/Fail/Pending) | Priority (Blocking/Warning) |
-  | --- | --- | --- | --- | --- |
+## Step 3: Run Browser Tests
 
-- **Failure Diagnostics**:
-  For each failed test:
-  1. Retrieve and display the error log or stdout.
-  2. Inspect the test commands and the modified code files.
-  3. Determine the root cause: is it a code bug, a test configuration issue, or a broken dependency?
-  4. Write a concrete recommendation/fix.
+Browser tests (`## Type: browser`) run via Chrome DevTools MCP tools directly in the IDE.
 
-- **Severity Classification**:
-  - If ANY `blocking` test fails → report overall status as **FAIL** and clearly state: "Blocking tests failed — do not merge."
-  - If only `warning` tests fail → report overall status as **WARN** and list the issues.
-  - If all tests pass → report overall status as **PASS**.
+### For each browser test:
 
-- **Browser Test Failures**:
-  - Include a screenshot of the failure state when possible.
-  - Note whether the failure is deterministic (same result on retry) or flaky.
-  - If a browser test has a `## Script` section and it fails, fall back to `## Steps` and re-run via LLM interpretation.
+1. **Check for `## Setup` section.** If present, run the setup commands first:
+   ```bash
+   # Example: start the dev server
+   npm start &
+   sleep 3
+   ```
+   Wait for the server to be ready before proceeding.
 
-- **Retry Policy**:
-  - Do NOT retry automated tests — they are deterministic.
-  - Browser tests may be retried once if the first attempt fails, to account for timing or rendering issues.
+2. **Check for `## Script` section.** If present, run the script directly — it's a deterministic Playwright/automation script generated from a previous successful run. This is faster and more reliable than AI interpretation.
 
-- **Final Output**:
-  End your report with a clear verdict:
-  ```
-  ## Verdict
-  [PASS | WARN | FAIL]
-  [One-line summary of results]
-  ```
+3. **If no `## Script`, use `## Steps`.** Read each step and execute via Chrome DevTools MCP tools:
+
+   | Step instruction | Chrome DevTools tool |
+   |---|---|
+   | "Open/navigate to URL" | `navigate_page` or `new_page` |
+   | "Click element" | `click` with CSS/text selector |
+   | "Type/enter text" | `fill` with selector and value |
+   | "Verify text exists" | `get_text` + check content |
+   | "Check page title" | `evaluate_javascript('document.title')` |
+   | "Verify no console errors" | `evaluate_javascript('window.__consoleErrors')` |
+   | "Take screenshot" | `screenshot` — embed in report |
+   | "Check element visible" | `evaluate_javascript('!!document.querySelector("...")') ` |
+
+4. **After successful `## Steps` execution**, generate a `## Script` section and write it back to the test.md file. This makes future runs deterministic. The script should use the exact selectors and values discovered during this run.
+
+5. **If `## Script` fails**, delete the `## Script` section and fall back to `## Steps`. Re-run via AI interpretation. If the steps succeed, generate a new `## Script`.
+
+### Fallback
+
+If Chrome DevTools MCP tools are not available in this environment:
+- Print the test steps for the user to follow manually
+- Mark the test as "browser - needs human verification"
+- Do NOT count it as a failure
+
+## Step 4: Analyze Failures
+
+For EVERY failed test, provide:
+
+### 1. What failed
+```
+Test: build/compile_check
+Type: automated
+Priority: blocking
+```
+
+### 2. Error output
+Show the actual error — the raw stdout/stderr from the test execution. Don't summarize, show the real output.
+
+### 3. Root cause analysis
+Determine WHY it failed:
+
+| Cause | How to identify | Example |
+|---|---|---|
+| **Code bug** | Test was passing before, fails after recent changes | New function has a nil pointer |
+| **Test misconfiguration** | Test commands are wrong for this project | test.md references `make build` but project uses `go build` |
+| **Missing dependency** | Import or tool not available | `gcc` not installed in Dockerfile |
+| **Flaky test** | Browser test fails intermittently | Timing issue with page load |
+| **Environment issue** | Docker not running, port in use | "Cannot connect to Docker daemon" |
+
+### 4. Recommended fix
+Be specific. Don't say "fix the test." Say exactly what to change:
+
+```diff
+- RUN go build ./...
++ RUN CGO_ENABLED=0 go build ./...
+```
+
+Or if it's a code bug:
+```
+The function ParseTestMD on line 42 of parser.go doesn't handle
+the case where ## Commands is empty. Add a nil check before
+calling extractCodeBlock.
+```
+
+## Step 5: Report Results
+
+### Results table (always show this first)
+
+```markdown
+| Category | Test Name | Type | Status | Priority |
+|----------|-----------|------|--------|----------|
+| build | compile_check | automated | ✅ Pass | blocking |
+| build | unit_tests | automated | ❌ Fail | blocking |
+| sanity | cli_help | automated | ✅ Pass | blocking |
+| browser | readme_accuracy | browser | ⏳ Pending | warning |
+```
+
+Status icons:
+- ✅ Pass
+- ❌ Fail
+- ⏳ Pending (browser test needs human verification)
+- 🔄 Retried (browser test passed on retry)
+
+### Summary line
+
+```
+Results: 12 passed, 1 failed, 1 pending (14 total)
+Blocking: 7/7 passed | Warning: 5/6 passed, 1 pending
+```
+
+### Verdict
+
+The final line of your report must be one of:
+
+```
+## Verdict: PASS ✅
+All tests passed. Safe to merge.
+```
+
+```
+## Verdict: WARN ⚠️
+All blocking tests passed. 2 warning tests failed — review recommended but not required.
+```
+
+```
+## Verdict: FAIL ❌
+1 blocking test failed. Do not merge until fixed.
+[List the failing blocking tests]
+```
+
+### Retry policy
+
+- **Automated tests**: NEVER retry. They are deterministic — if they fail, it's a real failure.
+- **Browser tests**: Retry ONCE if the first attempt fails (timing/rendering issues). If it fails again, it's a real failure.
+
+## Edge Cases
+
+- **No tests found**: If `.revv/` exists but has no test.md files, tell the user: "No tests found. Run `revv init` to generate tests."
+- **All tests skipped**: If all tests are `browser` type and Chrome DevTools is unavailable, report all as pending and suggest the user run in an IDE with browser tools.
+- **Docker build fails**: Report as a blocking failure. Include the Dockerfile and build log. This usually means the Dockerfile needs updating for new dependencies.
+- **Test timeout**: If a test runs longer than the timeout (default 5 minutes), kill it and report as failed with "timed out after 5m".
+- **Partial failure**: If some tests pass and some fail, still report all results. Don't stop at the first failure.
