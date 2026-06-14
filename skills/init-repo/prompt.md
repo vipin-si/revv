@@ -200,7 +200,7 @@ sleep 3
 
 Generate `.revv/Dockerfile` with:
 
-- **Base image**: Minimal official image matching the project language (`golang:1.22-alpine`, `node:20-alpine`, `python:3.11-slim`, `rust:1.78-alpine`)
+- **Base image**: Minimal official image matching the project language and version. **Read the version from the project's config** (e.g., `go.mod` for Go, `package.json` for Node, `Cargo.toml` for Rust). Examples: `golang:1.26-alpine`, `node:20-alpine`, `python:3.11-slim`, `rust:1.78-alpine`
 - **System deps**: Install `make`, `git`, `gcc`, and any other tools the build needs
 - **Working directory**: `/workspace`
 - **COPY source**: `COPY . /workspace`

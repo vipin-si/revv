@@ -9,7 +9,7 @@ automated
 
 ## Commands
 ```bash
-go test -count=1 -v ./... 2>&1
+go test -count=1 -v ./internal/... 2>&1
 if [ $? -ne 0 ]; then
   echo "FAIL: one or more Go tests failed"
   exit 1

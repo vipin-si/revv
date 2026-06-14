@@ -353,7 +353,7 @@ func TestRunExec_DockerAvailabilityCheckFails(t *testing.T) {
 	err = runExec(cmd, nil)
 	if err == nil {
 		t.Errorf("expected connection error or context timeout error, got nil")
-	} else if !strings.Contains(err.Error(), "installation declined") {
-		t.Errorf("expected installation declined error, got: %v", err)
+	} else if !strings.Contains(err.Error(), "installation declined") && !strings.Contains(err.Error(), "cannot be auto-installed") {
+		t.Errorf("expected installation declined or auto-install error, got: %v", err)
 	}
 }

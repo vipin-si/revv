@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -100,9 +101,13 @@ func TestCreateTarArchive(t *testing.T) {
 func TestDetectInstaller(t *testing.T) {
 	installer, err := detectInstaller()
 	if err != nil {
-		// If on unsupported OS, this is fine
+		// If on unsupported OS, or on Linux without apt/dnf/yum (e.g. Alpine), skip
 		if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
 			return
+		}
+		// Alpine and other minimal distros don't have apt/dnf/yum — this is expected
+		if strings.Contains(err.Error(), "no supported package manager") {
+			t.Skipf("skipping on Linux without apt/dnf/yum: %v", err)
 		}
 		t.Fatalf("detectInstaller failed on supported OS: %v", err)
 	}
