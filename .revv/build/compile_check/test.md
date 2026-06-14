@@ -1,16 +1,18 @@
 ## Description
-Verify that the CLI binary compiles successfully and is executable.
+Verify that the revv binary compiles from source without errors. This is the most fundamental check — if it doesn't build, nothing else matters.
 
 ## Priority
 blocking
 
+## Type
+automated
+
 ## Commands
 ```bash
-make clean
-make build
-test -x ./bin/revv || (echo "FAIL: binary not found or not executable" && exit 1)
-echo "PASS: compilation successful"
+go build -v -o /tmp/revv_test_binary ./cmd/revv 2>&1
+test -x /tmp/revv_test_binary || (echo "FAIL: binary not found at /tmp/revv_test_binary" && exit 1)
+echo "PASS: revv binary compiled successfully"
 ```
 
 ## Expected Output
-Exit code 0. Output ends with "PASS: compilation successful".
+Build completes with exit code 0 and the binary exists at `/tmp/revv_test_binary`.
