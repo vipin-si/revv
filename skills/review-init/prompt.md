@@ -295,26 +295,7 @@ Issues flagged by multiple reviewers (highest confidence):
 
 Save the report as an artifact.
 
-## Step 4: Apply Fixes
-
-After presenting the report:
-
-1. **Fix all 🔴 Must Fix issues** — rewrite the test.md files with corrected commands, add missing tests, remove redundant ones
-2. **Fix all 🟡 Should Fix issues** — unless there's a good reason to skip
-3. **Skip 🟢 Nice to Have** — unless trivial
-
-## Step 5: Re-Review (Loop)
-
-After applying fixes, run the review again:
-
-- **Pass 2**: Add to each reviewer's prompt: "This is a SECOND review pass. The test suite has been revised. Verify fixes from Pass 1 are applied. Be stricter — focus on issues you may have missed."
-- **Pass 3** (only if Pass 2 still has 🔴 issues): Final check. Only flag issues that would cause real failures.
-
-### When to Stop
-
-- Stop after **Pass 2** if no remaining 🔴 issues
-- Run **Pass 3** only if Pass 2 still has 🔴 items
-- Never run more than 3 passes
+**This skill's job is done.** It produces a review report — it does NOT apply fixes or re-run itself. The calling skill (`init-repo`, `update-repo`, `add-tests`) is responsible for reading the report, applying fixes, and re-running the review if needed.
 
 ---
 
@@ -322,9 +303,9 @@ After applying fixes, run the review again:
 
 | Skill | How it connects |
 |:------|:---------------|
-| `init-repo` | Init generates `.revv/`, then calls this skill to review. Loop up to 3 passes. |
-| `update-repo` | After updating tests, call this skill to verify changes. Single pass. |
-| `add-tests` | After adding new tests, call this skill to review just the new ones. Single pass. |
+| `init-repo` | Init generates `.revv/`, calls this skill to review, applies fixes itself, and re-runs the review. Up to 3 passes. |
+| `update-repo` | After updating tests, calls this skill to verify changes. Applies fixes itself if needed. |
+| `add-tests` | After adding new tests, calls this skill to review just the new ones. Applies fixes itself if needed. |
 
 ## Tips
 
