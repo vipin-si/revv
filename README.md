@@ -139,6 +139,7 @@ A test.md with `## Steps` is executed by the IDE's browser automation:
 IDE Skills (the brain)
 │
 ├── "revv init"      → LLM runs init-repo to set up config and Dockerfile
+│                       └── review-init (3 parallel reviewers validate quality, loop up to 3x)
 ├── "revv update"    → LLM runs update-repo to sync existing tests with commit history
 ├── "revv add-tests" → LLM runs add-tests to generate new tests for local diff
 └── "revv run"       → LLM runs run-tests to execute automated/browser tests
@@ -147,6 +148,7 @@ IDE Skills (the brain)
 | Component | What | Why |
 |-----------|------|-----|
 | [`init-repo`](skills/init-repo/SKILL.md) | Initializes `.revv/` directory | Analyzes project layout & configurations to set up Dockerfile and base tests |
+| [`review-init`](skills/review-init/SKILL.md) | Reviews generated test suite | 3 parallel reviewers (Command Correctness, Coverage, QA Realism) validate quality |
 | [`update-repo`](skills/update-repo/SKILL.md) | Updates existing `.revv/` tests | Scans commit logs and updates/deletes tests to reflect codebase evolution |
 | [`add-tests`](skills/add-tests/SKILL.md) | Generates new tests for local changes | Analyzes diff of current changes and builds tests targeting modified code |
 | [`run-tests`](skills/run-tests/SKILL.md) | Orchestrates execution of tests | Invokes add-tests, triggers Go execution, handles browser automation and failure analysis |

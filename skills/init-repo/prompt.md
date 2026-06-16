@@ -250,3 +250,15 @@ Before presenting the generated files to the developer:
 - [ ] AGENTS.md is updated (not duplicated)
 - [ ] Test names are descriptive (no `test1`, `check2`)
 - [ ] No more than 30 tests total
+
+## Review Loop — Quality Gate
+
+**After generating all files, do NOT present them to the user yet.** First, run the review-init skill to validate quality.
+
+1. Read the [review-init skill](https://raw.githubusercontent.com/vssinghh/revv/main/skills/review-init/SKILL.md) and follow its instructions.
+2. It will launch 3 parallel reviewers (Command Correctness, Coverage & Redundancy, QA Realism) to evaluate your generated test suite.
+3. Fix all 🔴 Must Fix and 🟡 Should Fix issues from the review report.
+4. Re-run the review. Repeat up to 3 passes total, or until no 🔴 issues remain.
+5. **Only then** present the final `.revv/` directory to the developer.
+
+This loop is mandatory. Do not skip it. The first generation is a draft — the review loop is what makes it production-quality.
