@@ -3,7 +3,7 @@
 
 BINARY_NAME := revv
 BINARY_DIR  := bin
-MODULE      := github.com/vipinsingh/revv
+MODULE      := github.com/vssinghh/revv
 
 VERSION := $(shell git describe --tags --always 2>/dev/null || echo "dev")
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")

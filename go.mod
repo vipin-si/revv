@@ -1,4 +1,4 @@
-module github.com/vipinsingh/revv
+module github.com/vssinghh/revv
 
 go 1.26.4
 
