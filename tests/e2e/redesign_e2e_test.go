@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vipinsingh/revv/internal/runner"
+	"github.com/vssinghh/revv/internal/runner"
 )
 
 // mockExecutor is a test double for the sandbox Executor interface

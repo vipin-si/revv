@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vipinsingh/revv/internal/runner"
+	"github.com/vssinghh/revv/internal/runner"
 )
 
 func captureStdout(t *testing.T, fn func()) string {

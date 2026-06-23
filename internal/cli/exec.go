@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/vipinsingh/revv/internal/runner"
-	"github.com/vipinsingh/revv/internal/sandbox"
+	"github.com/vssinghh/revv/internal/runner"
+	"github.com/vssinghh/revv/internal/sandbox"
 )
 
 func newExecCmd() *cobra.Command {

@@ -19,7 +19,7 @@ import (
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/stdcopy"
 
-	"github.com/vipinsingh/revv/internal/runner"
+	"github.com/vssinghh/revv/internal/runner"
 )
 
 // Sandbox manages Docker containers for isolated test execution.
